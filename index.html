@@ -1,0 +1,250 @@
+<!DOCTYPE html>
+<html lang="fr">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Garage Social</title>
+    <meta name="theme-color" content="#d95d39" />
+    <meta
+      name="description"
+      content="Suivi auto mobile-first pour trajets, pleins, entretiens, observations et partage entre utilisateurs."
+    />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800&family=Space+Grotesk:wght@500;700&display=swap"
+      rel="stylesheet"
+    />
+    <link
+      rel="stylesheet"
+      href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+      integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY="
+      crossorigin=""
+    />
+    <link rel="stylesheet" href="./styles.css" />
+  </head>
+  <body>
+    <section id="loading-screen" class="loading-screen">
+      <div class="loading-orb"></div>
+      <div class="loading-panel">
+        <p class="loading-kicker">Garage Social</p>
+        <h1 class="loading-title">Ton garage mobile, charge comme une app.</h1>
+        <p class="loading-copy">
+          Centralise tes voitures, tes entretiens, tes trajets et tes couts dans une
+          experience plein ecran pensee pour le mobile.
+        </p>
+        <div class="loading-pulse">
+          <span></span>
+          <span></span>
+          <span></span>
+        </div>
+        <div class="loading-actions">
+          <button id="enter-app" class="primary-button" type="button">Entrer dans l'app</button>
+        </div>
+      </div>
+    </section>
+
+    <div class="app-shell" id="app-shell">
+      <header class="topbar">
+        <div class="brand-block">
+          <p class="eyebrow">Companion automobile mobile</p>
+          <h1>Garage Social</h1>
+          <p class="topbar-copy">Un cockpit personnel pour suivre chaque voiture au quotidien.</p>
+        </div>
+        <button id="open-auth" class="ghost-button" type="button">Connexion</button>
+      </header>
+
+      <main class="layout">
+        <section class="hero-card">
+          <div class="hero-badge-row">
+            <span class="pill">Experience mobile</span>
+            <span class="pill">Journal intelligent</span>
+          </div>
+          <div class="hero-copy">
+            <h2>Suivre les trajets, l'entretien, les pleins et toute la vie de chaque vehicule.</h2>
+            <p>
+              Cree ton espace, ajoute tes voitures, archive tes evenements et consulte des
+              indicateurs directement dans une interface qui se comporte comme une app mobile.
+            </p>
+          </div>
+          <div class="hero-stats" id="hero-stats"></div>
+        </section>
+
+        <section class="section-card quick-actions">
+          <div class="section-heading">
+            <div>
+              <p class="eyebrow">Demarrage</p>
+              <h3>Actions rapides</h3>
+            </div>
+          </div>
+          <div class="action-grid">
+            <button data-open-modal="trip-modal" class="action-button" type="button">Nouveau trajet</button>
+            <button data-open-modal="fuel-modal" class="action-button" type="button">Ajouter un plein</button>
+            <button data-open-modal="maintenance-modal" class="action-button" type="button">Ajouter entretien</button>
+            <button data-open-modal="note-modal" class="action-button" type="button">Nouvelle observation</button>
+            <button data-open-modal="car-modal" class="action-button" type="button">Nouvelle voiture</button>
+            <button data-open-modal="profile-modal" class="action-button" type="button">Nouveau profil</button>
+            <button data-action="export-data" class="secondary-button" type="button">Exporter mes donnees</button>
+            <button data-action="import-data" class="secondary-button" type="button">Importer une sauvegarde</button>
+            <button data-action="reset-app" class="secondary-button danger-button" type="button">Vider les donnees locales</button>
+          </div>
+          <p class="muted helper-copy">Sauvegarde locale, restauration JSON et remise a zero du navigateur incluses.</p>
+        </section>
+
+        <section class="section-card">
+          <div class="section-heading">
+            <div>
+              <p class="eyebrow">Cockpit</p>
+              <h3>Vue d'ensemble</h3>
+            </div>
+            <select id="dashboard-car-filter" class="surface-input"></select>
+          </div>
+          <div id="dashboard-cards" class="dashboard-grid"></div>
+        </section>
+
+        <section class="section-card">
+          <div class="section-heading">
+            <div>
+              <p class="eyebrow">Gestion</p>
+              <h3>Mes voitures</h3>
+            </div>
+            <button data-open-modal="car-modal" class="surface-link" type="button">Ajouter</button>
+          </div>
+          <div id="cars-list" class="card-stack"></div>
+        </section>
+
+        <section class="section-card">
+          <div class="section-heading">
+            <div>
+              <p class="eyebrow">Social</p>
+              <h3>Profils et suivi</h3>
+            </div>
+            <button data-open-modal="follow-modal" class="surface-link" type="button">Suivre</button>
+          </div>
+          <div id="profiles-list" class="card-stack"></div>
+        </section>
+
+        <section class="section-card">
+          <div class="section-heading">
+            <div>
+              <p class="eyebrow">Historique</p>
+              <h3>Journal des activites</h3>
+            </div>
+            <div class="tabs" id="feed-tabs">
+              <button class="tab is-active" data-feed="all" type="button">Tout</button>
+              <button class="tab" data-feed="trip" type="button">Trajets</button>
+              <button class="tab" data-feed="fuel" type="button">Pleins</button>
+              <button class="tab" data-feed="maintenance" type="button">Entretiens</button>
+              <button class="tab" data-feed="note" type="button">Observations</button>
+            </div>
+          </div>
+          <div id="feed-list" class="timeline"></div>
+        </section>
+
+        <section class="section-card">
+          <div class="section-heading">
+            <div>
+              <p class="eyebrow">Cartographie</p>
+              <h3>Mes routes</h3>
+            </div>
+          </div>
+          <div class="map-shell">
+            <div id="route-map" class="route-map" aria-label="Carte des trajets"></div>
+            <div class="map-legend">
+              <span class="legend legend-low">Vert: routes les moins utilisees</span>
+              <span class="legend legend-high">Rouge: routes les plus utilisees</span>
+            </div>
+            <div id="route-map-summary" class="map-summary"></div>
+          </div>
+        </section>
+
+        <section class="section-card">
+          <div class="section-heading">
+            <div>
+              <p class="eyebrow">Analyse</p>
+              <h3>Indicateurs</h3>
+            </div>
+          </div>
+          <div id="analytics-grid" class="analytics-grid"></div>
+        </section>
+
+        <section class="section-card">
+          <div class="section-heading">
+            <div>
+              <p class="eyebrow">Hebergement gratuit</p>
+              <h3>Prete a deployer</h3>
+            </div>
+          </div>
+          <div class="deployment-list">
+            <article>
+              <h4>Application locale</h4>
+              <p>Fonctionne immediatement avec stockage navigateur pour un usage personnel ou une recette rapide.</p>
+            </article>
+            <article>
+              <h4>Mode collaboratif</h4>
+              <p>Schema SQL Supabase fourni pour utilisateurs, partage, suivi, public/prive et auth.</p>
+            </article>
+            <article>
+              <h4>Hote statique gratuit</h4>
+              <p>Compatible GitHub Pages, Netlify, Vercel ou Cloudflare Pages.</p>
+            </article>
+          </div>
+        </section>
+
+        <section class="section-card">
+          <div class="section-heading">
+            <div>
+              <p class="eyebrow">Livrable</p>
+              <h3>Kit de mise en production</h3>
+            </div>
+          </div>
+          <div class="deployment-list">
+            <article>
+              <h4>Front statique</h4>
+              <p>Application mobile-first deployable telle quelle sur un hebergement statique ou via nginx.</p>
+            </article>
+            <article>
+              <h4>Base de donnees</h4>
+              <p>Schema Supabase fourni, plus scripts PostgreSQL standards pour une installation serveur.</p>
+            </article>
+            <article>
+              <h4>Exploitation</h4>
+              <p>Scripts Linux, sauvegarde avant redeploiement, configuration d'exemple et documentation d'installation.</p>
+            </article>
+          </div>
+        </section>
+      </main>
+
+      <footer class="site-footer">
+        <p>Garage Social - interface web pensee comme une app mobile - prete pour recette et mise en ligne</p>
+      </footer>
+    </div>
+
+    <div id="modal-root"></div>
+    <input id="import-file-input" class="visually-hidden" type="file" accept="application/json" />
+
+    <template id="modal-template">
+      <div class="modal-backdrop" data-close-modal="true">
+        <div class="modal-panel" role="dialog" aria-modal="true">
+          <div class="modal-header">
+            <div>
+              <p class="eyebrow modal-eyebrow"></p>
+              <h3 class="modal-title"></h3>
+            </div>
+            <button class="icon-button" data-close-modal="true" type="button">Fermer</button>
+          </div>
+          <div class="modal-body"></div>
+        </div>
+      </div>
+    </template>
+
+    <script src="./config.js?v=20260420-1"></script>
+    <script
+      src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
+      integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo="
+      crossorigin=""
+    ></script>
+    <script src="./app.js?v=20260420-1"></script>
+    <!--<script type="module" src="./app.js?v=20260420-1"></script>-->
+  </body>
+</html>
