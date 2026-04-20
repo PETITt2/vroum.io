@@ -1,5 +1,5 @@
 window.GARAGE_SOCIAL_CONFIG = {
-  appName: "Garage Social",
+  appName: "VROUM.IO",
   environment: "demo",
   storageMode: "demo",
   supabaseUrl: "",
