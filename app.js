@@ -15,7 +15,7 @@ const $ = (selector) => document.querySelector(selector);
 const state = loadState();
 let feedFilter = "all";
 
-document.title = runtimeConfig.appName || "Garage Social";
+document.title = runtimeConfig.appName || "VROUM.IO";
 document.body.classList.add("app-locked");
 const titleNode = document.querySelector("h1");
 if (titleNode && runtimeConfig.appName) titleNode.textContent = runtimeConfig.appName;
