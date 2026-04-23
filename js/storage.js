@@ -76,19 +76,25 @@ async function _doSync() {
 
   try {
     // Cars the current user is member of (RLS filters this automatically)
-    // We select nested km_history and car_members+profiles in one query
     const { data: carsRaw, error: carsErr } = await sb
       .from('cars')
-      .select(`
-        *,
-        km_history ( * ),
-        car_members ( user_id, role, profiles ( username ) )
-      `)
+      .select(`*, km_history ( * ), car_members ( user_id, role )`)
       .order('created_at', { ascending: true });
 
     if (carsErr) throw carsErr;
 
     const carIds = (carsRaw || []).map(c => c.id);
+
+    // Fetch usernames for all car members (separate query — pas de FK directe vers profiles)
+    const memberIds = [...new Set(
+      (carsRaw || []).flatMap(c => (c.car_members || []).map(m => m.user_id))
+    )];
+    let profilesMap = {};
+    if (memberIds.length > 0) {
+      const { data: profilesData } = await sb
+        .from('profiles').select('id, username').in('id', memberIds);
+      (profilesData || []).forEach(p => { profilesMap[p.id] = p.username; });
+    }
 
     // Parallel fetch
     const [tripsRes, maintRes, fuelsRes, notesRes] = await Promise.all([
@@ -133,7 +139,7 @@ async function _doSync() {
       _store.carMembers[row.id] = (row.car_members || []).map(m => ({
         userId:   m.user_id,
         role:     m.role,
-        username: m.profiles?.username || '…',
+        username: profilesMap[m.user_id] || '…',
       }));
     });
 
