@@ -58,6 +58,7 @@ async function login(email, password) {
 async function logout() {
   await sb.auth.signOut();
   currentUser = null;
+  clearCache(); // On vide le cache local à la déconnexion
 }
 
 async function updateProfile(updates) {
@@ -93,5 +94,7 @@ function _friendlyError(msg) {
   if (msg.includes('Email not confirmed'))        return 'Confirme ton email avant de te connecter';
   if (msg.includes('User already registered'))    return 'Cet email est déjà utilisé';
   if (msg.includes('Password should be'))         return 'Mot de passe trop court (6 caractères min.)';
+  if (msg.includes('rate limit'))                 return 'Trop de tentatives — attends quelques minutes ou désactive la confirmation email dans Supabase (Authentication → Settings).';
+  if (msg.includes('over_email_send_rate_limit')) return 'Limite d\'envoi d\'email atteinte. Va dans Supabase → Authentication → Settings → désactive "Enable email confirmations".';
   return msg;
 }

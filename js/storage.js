@@ -20,6 +20,45 @@ let _store = {
 
 function genId() { return crypto.randomUUID(); }
 
+/* ============================================================
+   CACHE localStorage (chargement instantané au démarrage)
+   ============================================================ */
+
+const CACHE_KEY = 'vroumio_cache_v1';
+
+function saveCache() {
+  try {
+    localStorage.setItem(CACHE_KEY, JSON.stringify({
+      cars:        _store.cars,
+      trips:       _store.trips,
+      maintenance: _store.maintenance,
+      fuels:       _store.fuels,
+      notes:       _store.notes,
+      carMembers:  _store.carMembers,
+      savedAt:     Date.now(),
+    }));
+  } catch { /* quota dépassé — ignore */ }
+}
+
+function loadCache() {
+  try {
+    const raw = localStorage.getItem(CACHE_KEY);
+    if (!raw) return false;
+    const c = JSON.parse(raw);
+    _store.cars        = c.cars        || [];
+    _store.trips       = c.trips       || [];
+    _store.maintenance = c.maintenance || [];
+    _store.fuels       = c.fuels       || [];
+    _store.notes       = c.notes       || [];
+    _store.carMembers  = c.carMembers  || {};
+    return true;
+  } catch { return false; }
+}
+
+function clearCache() {
+  localStorage.removeItem(CACHE_KEY);
+}
+
 /* ---- Sync all data from Supabase ---- */
 async function syncAll() {
   const { data: { user } } = await sb.auth.getUser();
@@ -139,6 +178,8 @@ async function syncAll() {
       text:      row.text,
       createdAt: row.created_at,
     }));
+
+    saveCache(); // Sauvegarde pour le prochain démarrage
 
   } catch (err) {
     console.error('syncAll error:', err);

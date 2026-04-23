@@ -7,27 +7,32 @@ let _lastSync   = 0;
 
 /* ---- Boot ---- */
 document.addEventListener('DOMContentLoaded', async () => {
-  _showLoading('Connexion...');
-
-  try {
-    const user = await initAuth();
-    if (user) {
-      _showLoading('Chargement des données...');
-      await syncAll();
-      _hideLoading();
-      _showApp();
-    } else {
-      _hideLoading();
-      _showAuthScreen();
-    }
-  } catch (err) {
-    console.error('Boot error:', err);
-    _hideLoading();
-    _showAuthScreen();
-    toast('Erreur de connexion à la base de données', 'error');
-  }
-
   _wireGlobalEvents();
+
+  // 1. Vérifier la session (rapide — cookie local)
+  _showLoading('Connexion...');
+  let user = null;
+  try { user = await initAuth(); } catch { /* offline */ }
+  _hideLoading();
+
+  if (!user) { _showAuthScreen(); return; }
+
+  // 2. Charger le cache localStorage instantanément
+  const hasCached = loadCache();
+  _showApp(hasCached); // Affiche l'app immédiatement si cache dispo
+
+  // 3. Sync Supabase en arrière-plan (silencieux si cache dispo)
+  if (!hasCached) _showLoading('Première connexion...');
+  try {
+    await syncAll();
+    _renderTab(_currentTab); // Rafraîchit avec les données fraîches
+  } catch (err) {
+    console.error('Sync error:', err);
+    if (!hasCached) toast('Impossible de charger les données', 'error');
+    else toast('Mode hors-ligne — données du cache', 'info');
+  } finally {
+    _hideLoading();
+  }
 });
 
 /* ---- Loading overlay ---- */
@@ -56,17 +61,35 @@ function _hideLoading() {
   document.getElementById('loading-overlay')?.classList.add('hidden');
 }
 
+/* ---- Boot sequence (réutilisée par login / register / reload) ---- */
+async function _bootApp() {
+  const hasCached = loadCache();
+  _showApp(hasCached);
+  if (!hasCached) _showLoading('Chargement...');
+  try {
+    await syncAll();
+    _renderTab(_currentTab);
+  } catch {
+    if (!hasCached) toast('Impossible de joindre le serveur', 'error');
+    else toast('Mode hors-ligne — données du cache', 'info');
+  } finally {
+    _hideLoading();
+  }
+}
+
 /* ---- Screen switching ---- */
 function _showAuthScreen() {
   document.getElementById('auth-screen').classList.remove('hidden');
   document.getElementById('app').classList.add('hidden');
 }
 
-function _showApp() {
+function _showApp(immediate = false) {
   document.getElementById('auth-screen').classList.add('hidden');
   document.getElementById('app').classList.remove('hidden');
   _lastSync = Date.now();
-  navigate('garage');
+  if (immediate || !document.getElementById('page-garage').classList.contains('active')) {
+    navigate('garage');
+  }
 }
 
 /* ---- Navigation ---- */
@@ -131,33 +154,23 @@ function _wireGlobalEvents() {
   document.querySelector('[data-form="login"]')?.addEventListener('submit', async e => {
     e.preventDefault();
     const btn = e.target.querySelector('button[type="submit"]');
-    btn.disabled = true;
-    btn.textContent = 'Connexion...';
+    btn.disabled = true; btn.textContent = 'Connexion...';
     const fd = new FormData(e.target);
     const result = await login(fd.get('email'), fd.get('password'));
-    btn.disabled = false;
-    btn.textContent = 'Se connecter';
+    btn.disabled = false; btn.textContent = 'Se connecter';
     if (result.error) { toast(result.error, 'error'); return; }
-    _showLoading('Chargement des données...');
-    await syncAll();
-    _hideLoading();
-    _showApp();
+    await _bootApp();
   });
 
   document.querySelector('[data-form="register"]')?.addEventListener('submit', async e => {
     e.preventDefault();
     const btn = e.target.querySelector('button[type="submit"]');
-    btn.disabled = true;
-    btn.textContent = 'Création...';
+    btn.disabled = true; btn.textContent = 'Création...';
     const fd = new FormData(e.target);
     const result = await register(fd.get('username'), fd.get('email'), fd.get('password'));
-    btn.disabled = false;
-    btn.textContent = 'Créer mon compte';
+    btn.disabled = false; btn.textContent = 'Créer mon compte';
     if (result.error) { toast(result.error, result.user ? 'info' : 'error'); return; }
-    _showLoading('Chargement des données...');
-    await syncAll();
-    _hideLoading();
-    _showApp();
+    await _bootApp();
   });
 
   // Bottom nav
