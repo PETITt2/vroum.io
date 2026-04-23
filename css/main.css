@@ -1578,3 +1578,132 @@ ul, ol { list-style: none; }
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { animation-duration: 0.01ms !important; transition-duration: 0.01ms !important; }
 }
+
+/* ============================================================
+   MAP PICKER OVERLAY
+   ============================================================ */
+
+.map-picker-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 1100;
+  background: var(--bg);
+  display: flex;
+  flex-direction: column;
+}
+
+.map-picker-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 12px;
+  background: var(--surface-2);
+  border-bottom: 1px solid var(--border);
+  flex-shrink: 0;
+  flex-wrap: wrap;
+}
+
+.picker-mode-group {
+  display: flex;
+  gap: 4px;
+  flex: 1;
+  min-width: 0;
+}
+
+.picker-mode-btn {
+  flex: 1;
+  padding: 7px 8px;
+  border-radius: var(--radius-xs);
+  border: 1px solid var(--border-2);
+  background: var(--surface-3);
+  color: var(--text-2);
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s;
+  white-space: nowrap;
+}
+
+.picker-mode-btn.active-start  { background: #06d6a022; border-color: #06d6a0; color: #06d6a0; }
+.picker-mode-btn.active-wp     { background: #ffd60a22; border-color: #ffd60a; color: #ffd60a; }
+.picker-mode-btn.active-end    { background: #e6394622; border-color: #e63946; color: #e63946; }
+
+.picker-hint {
+  padding: 6px 14px;
+  font-size: 12px;
+  color: var(--text-2);
+  background: var(--surface);
+  border-bottom: 1px solid var(--border);
+  flex-shrink: 0;
+}
+
+#picker-map-el {
+  flex: 1;
+  min-height: 0;
+}
+
+.picker-points-list {
+  flex-shrink: 0;
+  max-height: 130px;
+  overflow-y: auto;
+  background: var(--surface);
+  border-top: 1px solid var(--border);
+  padding: 6px 12px;
+}
+
+.picker-point-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 5px 0;
+  border-bottom: 1px solid var(--border);
+}
+.picker-point-item:last-child { border-bottom: none; }
+
+.picker-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.picker-point-type {
+  font-size: 11px;
+  color: var(--text-3);
+  min-width: 55px;
+  flex-shrink: 0;
+}
+
+.picker-point-label {
+  font-size: 12px;
+  color: var(--text-2);
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* Trip waypoints display in form */
+.waypoints-preview {
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-xs);
+  padding: 8px 12px;
+  margin-top: 8px;
+}
+
+.waypoint-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 0;
+  font-size: 13px;
+  color: var(--text-2);
+}
+
+.waypoint-connector {
+  width: 2px;
+  height: 12px;
+  background: var(--border-2);
+  margin-left: 4px;
+}

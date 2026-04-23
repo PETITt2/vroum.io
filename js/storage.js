@@ -161,6 +161,7 @@ async function _doSync() {
       manual:       row.manual || false,
       startAddress: row.start_address || '',
       endAddress:   row.end_address || '',
+      waypoints:    row.waypoints || [],
       createdAt:    row.created_at,
     }));
 
@@ -321,6 +322,7 @@ async function upsertTrip(trip) {
     manual:        trip.manual || false,
     start_address: trip.startAddress || '',
     end_address:   trip.endAddress || '',
+    waypoints:     trip.waypoints   || [],
   });
   if (error) { toast('Erreur sync trajet', 'error'); console.error(error); }
   return trip;
