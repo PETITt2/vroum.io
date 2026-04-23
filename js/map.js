@@ -79,18 +79,22 @@ function _showHeatmap(user) {
   }
 
   // Collect all GPS points for heatmap
+  // On normalise le poids par la densité de points du trajet pour éviter la sur-intensité des routes OSRM
   const points = [];
   trips.forEach(trip => {
+    const n      = trip.route.length;
+    const weight = n > 50 ? 0.08 : n > 10 ? 0.15 : 0.4; // routes OSRM très denses → poids faible
     trip.route.forEach(pt => {
-      points.push([pt[0], pt[1], 0.6]);
+      points.push([pt[0], pt[1], weight]);
     });
   });
 
   _heatLayer = L.heatLayer(points, {
-    radius:    18,
-    blur:      15,
-    maxZoom:   16,
-    gradient:  { 0.0: '#06d6a0', 0.3: '#ffd60a', 0.65: '#f77f00', 1.0: '#e63946' },
+    radius:   9,
+    blur:     7,
+    maxZoom:  18,
+    max:      1.0,
+    gradient: { 0.0: '#06d6a0', 0.45: '#ffd60a', 0.75: '#f77f00', 1.0: '#e63946' },
   }).addTo(_mapInstance);
 
   // Fit bounds to all routes
@@ -115,12 +119,12 @@ function _showSingleTrip(tripId) {
   if (trip.route[0].length >= 4) {
     // route has speed data: [lat, lng, timestamp, speed]
     for (let i = 1; i < latlngs.length; i++) {
-      const spd   = trip.route[i][3] || 0; // km/h
+      const spd      = trip.route[i][3] || 0; // km/h
       const segColor = _speedColor(spd, trip.maxSpeed || 130);
-      L.polyline([latlngs[i-1], latlngs[i]], { color: segColor, weight: 5, opacity: 0.85 }).addTo(_polylineLayer);
+      L.polyline([latlngs[i-1], latlngs[i]], { color: segColor, weight: 3, opacity: 0.8 }).addTo(_polylineLayer);
     }
   } else {
-    L.polyline(latlngs, { color, weight: 5, opacity: 0.85 }).addTo(_polylineLayer);
+    L.polyline(latlngs, { color, weight: 3, opacity: 0.8 }).addTo(_polylineLayer);
   }
 
   // Start / end markers

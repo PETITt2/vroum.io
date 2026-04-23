@@ -193,7 +193,7 @@ function _initTripDetailMap(tripId, color) {
   L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', { maxZoom: 19 }).addTo(map);
 
   const latlngs = trip.route.map(p => [p[0], p[1]]);
-  const poly = L.polyline(latlngs, { color, weight: 4, opacity: 0.9 }).addTo(map);
+  const poly = L.polyline(latlngs, { color, weight: 3, opacity: 0.85 }).addTo(map);
 
   // Start/end markers
   if (latlngs.length > 0) {

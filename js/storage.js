@@ -236,11 +236,12 @@ function getNotesByCarId(carId) { return _store.notes.filter(n => n.carId === ca
    ============================================================ */
 
 async function upsertCar(car) {
-  const idx = _store.cars.findIndex(c => c.id === car.id);
-  if (idx >= 0) _store.cars[idx] = { ..._store.cars[idx], ...car };
-  else           _store.cars.push(car);
+  const idx   = _store.cars.findIndex(c => c.id === car.id);
+  const isNew = idx < 0;
+  if (isNew) _store.cars.push(car);
+  else       _store.cars[idx] = { ..._store.cars[idx], ...car };
 
-  const { error } = await sb.from('cars').upsert({
+  const payload = {
     id:         car.id,
     owner_id:   car.userId,
     name:       car.name || '',
@@ -251,8 +252,18 @@ async function upsertCar(car) {
     plate:      car.plate || '',
     fuel_type:  car.fuelType || 'Essence',
     initial_km: car.initialKm || 0,
-  });
-  if (error) { toast('Erreur sync voiture', 'error'); console.error(error); }
+  };
+
+  // INSERT pour les nouvelles voitures (déclenche le trigger car_members owner)
+  // UPDATE pour les modifications (évite le conflit RLS upsert)
+  const { error } = isNew
+    ? await sb.from('cars').insert(payload)
+    : await sb.from('cars').update(payload).eq('id', car.id);
+
+  if (error) {
+    toast(`Erreur voiture : ${error.message || error.code}`, 'error');
+    console.error('[vroum] upsertCar error:', error);
+  }
   return car;
 }
 
