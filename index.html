@@ -1,0 +1,234 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <meta name="theme-color" content="#0d0d14">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <title>VROUM.IO</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="">
+  <link rel="stylesheet" href="css/main.css">
+</head>
+<body>
+
+  <!-- ===================== AUTH SCREEN ===================== -->
+  <div id="auth-screen" class="screen">
+    <div class="auth-bg"></div>
+    <div class="auth-container">
+      <div class="auth-logo">
+        <div class="auth-logo-icon">
+          <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M5 17H3a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11a2 2 0 0 1 2 2v3"/>
+            <rect x="9" y="11" width="14" height="10" rx="2"/>
+            <circle cx="12" cy="21" r="1"/>
+            <circle cx="20" cy="21" r="1"/>
+          </svg>
+        </div>
+        <div>
+          <p class="auth-logo-name">VROUM.IO</p>
+          <p class="auth-logo-tagline">Ton garage dans ta poche</p>
+        </div>
+      </div>
+
+      <div class="auth-card">
+        <div class="auth-tabs">
+          <button class="auth-tab active" data-auth-tab="login">Connexion</button>
+          <button class="auth-tab" data-auth-tab="register">Créer un compte</button>
+        </div>
+
+        <form id="login-form" class="auth-form" data-form="login">
+          <div class="field">
+            <label>Email</label>
+            <input type="email" name="email" placeholder="ton@email.com" required autocomplete="email">
+          </div>
+          <div class="field">
+            <label>Mot de passe</label>
+            <input type="password" name="password" placeholder="••••••••" required autocomplete="current-password">
+          </div>
+          <button type="submit" class="btn-primary btn-full">Se connecter</button>
+        </form>
+
+        <form id="register-form" class="auth-form hidden" data-form="register">
+          <div class="field">
+            <label>Pseudo</label>
+            <input type="text" name="username" placeholder="piloteduroute" required minlength="2" autocomplete="username">
+          </div>
+          <div class="field">
+            <label>Email</label>
+            <input type="email" name="email" placeholder="ton@email.com" required autocomplete="email">
+          </div>
+          <div class="field">
+            <label>Mot de passe</label>
+            <input type="password" name="password" placeholder="6 caractères min." required minlength="6" autocomplete="new-password">
+          </div>
+          <button type="submit" class="btn-primary btn-full">Créer mon compte</button>
+        </form>
+      </div>
+
+      <p class="auth-note">Tes données sont stockées uniquement sur ton appareil.</p>
+    </div>
+  </div>
+
+  <!-- ===================== APP SHELL ===================== -->
+  <div id="app" class="hidden">
+
+    <!-- Main pages container -->
+    <div id="pages-wrapper">
+
+      <!-- GARAGE PAGE -->
+      <div id="page-garage" class="page active" data-page="garage">
+        <header class="page-header">
+          <div class="header-left">
+            <h1 class="page-title">Garage</h1>
+          </div>
+          <button class="icon-btn" id="btn-add-car" aria-label="Ajouter une voiture">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+          </button>
+        </header>
+        <div id="garage-content" class="page-scroll"></div>
+      </div>
+
+      <!-- TRIPS PAGE -->
+      <div id="page-trips" class="page hidden" data-page="trips">
+        <header class="page-header">
+          <div class="header-left">
+            <h1 class="page-title">Trajets</h1>
+          </div>
+          <button class="icon-btn" id="btn-add-trip" aria-label="Ajouter un trajet">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+          </button>
+        </header>
+        <div id="trips-content" class="page-scroll"></div>
+      </div>
+
+      <!-- MAP PAGE -->
+      <div id="page-map" class="page hidden" data-page="map">
+        <header class="page-header">
+          <div class="header-left">
+            <h1 class="page-title">Carte</h1>
+          </div>
+          <select id="map-filter" class="header-select">
+            <option value="all">Tous les trajets</option>
+          </select>
+        </header>
+        <div id="map-wrapper" class="map-wrapper">
+          <div id="main-map"></div>
+          <div class="map-legend">
+            <div class="legend-row">
+              <span class="legend-swatch" style="background:linear-gradient(to right,#06d6a0,#ffd60a,#e63946)"></span>
+              <span class="legend-label">Fréquence des routes</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- DRIVING PAGE -->
+      <div id="page-driving" class="page hidden" data-page="driving">
+        <header class="page-header">
+          <div class="header-left">
+            <h1 class="page-title">Conduite</h1>
+          </div>
+          <div id="driving-car-badge" class="car-badge hidden"></div>
+        </header>
+        <div id="driving-content" class="page-scroll"></div>
+      </div>
+
+      <!-- PROFILE PAGE -->
+      <div id="page-profile" class="page hidden" data-page="profile">
+        <header class="page-header">
+          <div class="header-left">
+            <h1 class="page-title">Profil</h1>
+          </div>
+        </header>
+        <div id="profile-content" class="page-scroll"></div>
+      </div>
+
+    </div>
+
+    <!-- SUB-PAGE (slides over main pages) -->
+    <div id="sub-page" class="sub-page hidden">
+      <header class="page-header sub-header">
+        <button class="back-btn" id="back-btn">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
+          Retour
+        </button>
+        <h1 class="page-title" id="sub-page-title"></h1>
+        <div class="header-actions" id="sub-page-actions"></div>
+      </header>
+      <div id="sub-page-content" class="page-scroll"></div>
+    </div>
+
+    <!-- BOTTOM NAVIGATION -->
+    <nav class="bottom-nav" id="bottom-nav">
+      <button class="nav-item active" data-tab="garage">
+        <svg class="nav-icon" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/>
+        </svg>
+        <span class="nav-label">Garage</span>
+      </button>
+      <button class="nav-item" data-tab="trips">
+        <svg class="nav-icon" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M12 22s-8-4.5-8-11.8A8 8 0 0 1 12 2a8 8 0 0 1 8 8.2c0 7.3-8 11.8-8 11.8z"/><circle cx="12" cy="10" r="3"/>
+        </svg>
+        <span class="nav-label">Trajets</span>
+      </button>
+      <button class="nav-item" data-tab="map">
+        <svg class="nav-icon" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+          <polygon points="3 6 9 3 15 6 21 3 21 18 15 21 9 18 3 21"/><line x1="9" y1="3" x2="9" y2="18"/><line x1="15" y1="6" x2="15" y2="21"/>
+        </svg>
+        <span class="nav-label">Carte</span>
+      </button>
+      <button class="nav-item" data-tab="driving">
+        <svg class="nav-icon" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+          <circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="12" x2="15" y2="14"/>
+        </svg>
+        <span class="nav-label">Conduite</span>
+      </button>
+      <button class="nav-item" data-tab="profile">
+        <svg class="nav-icon" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/>
+        </svg>
+        <span class="nav-label">Profil</span>
+      </button>
+    </nav>
+
+  </div>
+
+  <!-- MODAL -->
+  <div id="modal-overlay" class="modal-overlay hidden" role="dialog" aria-modal="true">
+    <div id="modal-box" class="modal-box">
+      <div class="modal-header">
+        <h2 id="modal-title" class="modal-title"></h2>
+        <button id="modal-close" class="modal-close-btn" aria-label="Fermer">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+        </button>
+      </div>
+      <div id="modal-body" class="modal-body"></div>
+    </div>
+  </div>
+
+  <!-- TOAST CONTAINER -->
+  <div id="toast-container" aria-live="polite"></div>
+
+  <!-- HIDDEN INPUTS -->
+  <input type="file" id="import-file" accept=".json" class="visually-hidden">
+
+  <!-- SCRIPTS -->
+  <!-- Supabase JS v2 (doit être chargé EN PREMIER) -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV/XN/WLs=" crossorigin=""></script>
+  <script src="https://unpkg.com/leaflet.heat@0.2.0/dist/leaflet-heat.js"></script>
+  <script src="js/storage.js"></script>
+  <script src="js/auth.js"></script>
+  <script src="js/ui.js"></script>
+  <script src="js/cars.js"></script>
+  <script src="js/trips.js"></script>
+  <script src="js/map.js"></script>
+  <script src="js/driving.js"></script>
+  <script src="js/app.js"></script>
+</body>
+</html>
