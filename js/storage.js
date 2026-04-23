@@ -61,7 +61,17 @@ function clearCache() {
 
 /* ---- Sync all data from Supabase ---- */
 async function syncAll() {
-  const { data: { user } } = await sb.auth.getUser();
+  // Timeout de 10s pour éviter de bloquer indéfiniment (cold start Supabase)
+  const timeout = new Promise((_, reject) =>
+    setTimeout(() => reject(new Error('sync timeout')), 10000)
+  );
+  return Promise.race([_doSync(), timeout]);
+}
+
+async function _doSync() {
+  // getSession() lit depuis le localStorage — aucun appel réseau (contrairement à getUser())
+  const { data: { session } } = await sb.auth.getSession();
+  const user = session?.user;
   if (!user) return;
 
   try {
@@ -85,14 +95,19 @@ async function syncAll() {
       sb.from('trips').select('*').eq('user_id', user.id).order('date', { ascending: false }),
       carIds.length
         ? sb.from('maintenance').select('*').in('car_id', carIds).order('date', { ascending: false })
-        : Promise.resolve({ data: [] }),
+        : Promise.resolve({ data: [], error: null }),
       carIds.length
         ? sb.from('fuels').select('*').in('car_id', carIds).order('date', { ascending: false })
-        : Promise.resolve({ data: [] }),
+        : Promise.resolve({ data: [], error: null }),
       carIds.length
         ? sb.from('notes').select('*').in('car_id', carIds).order('date', { ascending: false })
-        : Promise.resolve({ data: [] }),
+        : Promise.resolve({ data: [], error: null }),
     ]);
+
+    // Log et throw si une requête parallèle a échoué
+    for (const [name, res] of [['trips', tripsRes], ['maintenance', maintRes], ['fuels', fuelsRes], ['notes', notesRes]]) {
+      if (res.error) { console.error(`[vroum] ${name} query error:`, res.error); throw res.error; }
+    }
 
     // Map cars
     _store.cars = (carsRaw || []).map(row => ({
@@ -182,7 +197,9 @@ async function syncAll() {
     saveCache(); // Sauvegarde pour le prochain démarrage
 
   } catch (err) {
-    console.error('syncAll error:', err);
+    console.error('[vroum] syncAll failed —', err?.message || err?.code || err);
+    if (err?.details) console.error('[vroum] details:', err.details);
+    if (err?.hint)    console.error('[vroum] hint:', err.hint);
     throw err;
   }
 }

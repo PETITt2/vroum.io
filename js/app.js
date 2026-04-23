@@ -23,16 +23,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   // 3. Sync Supabase en arrière-plan (silencieux si cache dispo)
   if (!hasCached) _showLoading('Première connexion...');
-  try {
-    await syncAll();
-    _renderTab(_currentTab); // Rafraîchit avec les données fraîches
-  } catch (err) {
-    console.error('Sync error:', err);
-    if (!hasCached) toast('Impossible de charger les données', 'error');
-    else toast('Mode hors-ligne — données du cache', 'info');
-  } finally {
-    _hideLoading();
-  }
+  await _syncWithRetry(hasCached);
 });
 
 /* ---- Loading overlay ---- */
@@ -61,20 +52,37 @@ function _hideLoading() {
   document.getElementById('loading-overlay')?.classList.add('hidden');
 }
 
+/* ---- Sync with retry (cold start Supabase can take a few seconds) ---- */
+async function _syncWithRetry(hasCached, maxAttempts = 3, delayMs = 2000) {
+  for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+    try {
+      await syncAll();
+      _renderTab(_currentTab);
+      _hideLoading();
+      return; // succès
+    } catch (err) {
+      console.warn(`[vroum] Sync attempt ${attempt}/${maxAttempts} failed:`, err?.message || err);
+      if (attempt < maxAttempts) {
+        // Attendre avant de réessayer (cold start Supabase)
+        await new Promise(r => setTimeout(r, delayMs));
+      } else {
+        // Tous les essais épuisés
+        _hideLoading();
+        if (!hasCached) {
+          toast('Impossible de joindre le serveur — vérifie ta connexion', 'error');
+        }
+        // Si on a un cache, on ne montre rien — l'app fonctionne en mode offline
+      }
+    }
+  }
+}
+
 /* ---- Boot sequence (réutilisée par login / register / reload) ---- */
 async function _bootApp() {
   const hasCached = loadCache();
   _showApp(hasCached);
   if (!hasCached) _showLoading('Chargement...');
-  try {
-    await syncAll();
-    _renderTab(_currentTab);
-  } catch {
-    if (!hasCached) toast('Impossible de joindre le serveur', 'error');
-    else toast('Mode hors-ligne — données du cache', 'info');
-  } finally {
-    _hideLoading();
-  }
+  await _syncWithRetry(hasCached);
 }
 
 /* ---- Screen switching ---- */
