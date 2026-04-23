@@ -108,7 +108,7 @@ function _renderTripDetail(container, tripId) {
   if (!trip) return;
   const car   = trip.carId ? getCarById(trip.carId) : null;
   const color = car ? carColorHex(car.color) : '#4cc9f0';
-  const hasRoute = trip.route && trip.route.length > 1;
+  const hasRoute = trip.route && trip.route.length >= 2;
 
   container.innerHTML = `
     <div class="kpi-grid mb-16">
@@ -134,12 +134,21 @@ function _renderTripDetail(container, tripId) {
       </div>` : ''}
     </div>
 
-    ${car ? `<div class="card mb-16" style="padding:12px 16px">
-      <div class="flex flex-center gap-8">
+    ${(trip.startAddress || trip.endAddress || car) ? `
+    <div class="card mb-16" style="padding:12px 16px">
+      ${car ? `<div class="flex flex-center gap-8 mb-8">
         <div class="color-dot" style="background:${color};width:10px;height:10px"></div>
         <span style="font-size:14px;font-weight:600">${esc(car.brand)} ${esc(car.model)}</span>
         ${trip.startKm ? `<span class="text-muted text-sm">· ${Number(trip.startKm).toLocaleString('fr-FR')} km</span>` : ''}
-      </div>
+      </div>` : ''}
+      ${trip.startAddress ? `<div class="flex flex-center gap-8" style="margin-bottom:4px">
+        <span style="font-size:18px">🟢</span>
+        <span style="font-size:13px;color:var(--text-2)">${esc(trip.startAddress)}</span>
+      </div>` : ''}
+      ${trip.endAddress ? `<div class="flex flex-center gap-8">
+        <span style="font-size:18px">🔴</span>
+        <span style="font-size:13px;color:var(--text-2)">${esc(trip.endAddress)}</span>
+      </div>` : ''}
     </div>` : ''}
 
     ${trip.notes ? `<div class="card mb-16" style="padding:14px 16px">
@@ -188,7 +197,7 @@ function _confirmDeleteTrip(tripId) {
 
 /* ---- Add Trip Modal (manual) ---- */
 function openAddTripModal() {
-  const cars = getCars(getUser().id);
+  const cars = getCars();
   const carOptions = cars.map(c =>
     `<option value="${c.id}">${esc(c.name || `${c.brand} ${c.model}`)}</option>`
   ).join('');
@@ -204,6 +213,14 @@ function openAddTripModal() {
         <option value="">Sans voiture</option>
         ${carOptions}
       </select>
+    </div>
+    <div class="field">
+      <label>Adresse de départ</label>
+      <input type="text" id="f-tstart" placeholder="12 rue de la Paix, Paris">
+    </div>
+    <div class="field">
+      <label>Adresse d'arrivée</label>
+      <input type="text" id="f-tend" placeholder="Gare de Lyon, Paris">
     </div>
     <div class="field-row">
       <div class="field">
@@ -230,35 +247,70 @@ function openAddTripModal() {
       <textarea id="f-tnotes" placeholder="Conditions, remarques..." rows="2"></textarea>
     </div>
     <div class="form-actions">
-      <button class="btn-primary" onclick="_saveManualTrip()">Ajouter le trajet</button>
+      <button class="btn-primary" id="btn-save-trip" onclick="_saveManualTrip()">Ajouter le trajet</button>
       <button class="btn-secondary" onclick="closeModal()">Annuler</button>
     </div>`);
 }
 
-function _saveManualTrip() {
-  const name     = document.getElementById('f-tname')?.value.trim() || 'Trajet';
-  const carId    = document.getElementById('f-tcar')?.value || null;
-  const date     = document.getElementById('f-tdate')?.value || todayISO();
-  const duration = parseInt(document.getElementById('f-tduration')?.value, 10) || 0;
-  const distance = parseFloat(document.getElementById('f-tdist')?.value) || 0;
-  const startKm  = parseInt(document.getElementById('f-tstartkm')?.value, 10) || 0;
-  const notes    = document.getElementById('f-tnotes')?.value.trim() || '';
+async function _geocodeAddress(address) {
+  if (!address || address.trim().length < 3) return null;
+  try {
+    const url = `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(address)}&limit=1&accept-language=fr`;
+    const res  = await fetch(url, { headers: { 'User-Agent': 'vroum.io/1.0' } });
+    const data = await res.json();
+    if (data && data[0]) return [parseFloat(data[0].lat), parseFloat(data[0].lon)];
+  } catch { /* géocodage optionnel */ }
+  return null;
+}
+
+async function _saveManualTrip() {
+  const btn = document.getElementById('btn-save-trip');
+  if (btn) { btn.disabled = true; btn.textContent = 'Géocodage...'; }
+
+  const name         = document.getElementById('f-tname')?.value.trim() || 'Trajet';
+  const carId        = document.getElementById('f-tcar')?.value || null;
+  const date         = document.getElementById('f-tdate')?.value || todayISO();
+  const duration     = parseInt(document.getElementById('f-tduration')?.value, 10) || 0;
+  const distance     = parseFloat(document.getElementById('f-tdist')?.value) || 0;
+  const startKm      = parseInt(document.getElementById('f-tstartkm')?.value, 10) || 0;
+  const notes        = document.getElementById('f-tnotes')?.value.trim() || '';
+  const startAddress = document.getElementById('f-tstart')?.value.trim() || '';
+  const endAddress   = document.getElementById('f-tend')?.value.trim() || '';
+
+  // Géocodage des adresses pour afficher sur la carte
+  const [startCoords, endCoords] = await Promise.all([
+    _geocodeAddress(startAddress),
+    _geocodeAddress(endAddress),
+  ]);
+
+  // Construire la route : 2 points si on a les deux adresses
+  let route = [];
+  if (startCoords && endCoords) {
+    route = [startCoords, endCoords];
+  } else if (startCoords) {
+    route = [startCoords];
+  } else if (endCoords) {
+    route = [endCoords];
+  }
 
   const trip = {
     id: genId(), userId: getUser().id, carId: carId || null,
     name, date,
-    duration:  duration * 60,
+    duration:     duration * 60,
     distance,
-    startKm, endKm: startKm + Math.round(distance),
-    avgSpeed:  duration > 0 ? (distance / (duration / 60)) : 0,
-    maxSpeed:  0,
-    route:     [],
+    startKm,
+    endKm:        startKm + Math.round(distance),
+    avgSpeed:     duration > 0 ? (distance / (duration / 60)) : 0,
+    maxSpeed:     0,
+    route,
     notes,
-    createdAt: new Date().toISOString(),
-    manual:    true,
+    startAddress,
+    endAddress,
+    createdAt:    new Date().toISOString(),
+    manual:       true,
   };
 
-  upsertTrip(trip);
+  await upsertTrip(trip);
   closeModal();
   renderTrips();
   toast('Trajet ajouté ✓', 'success');
