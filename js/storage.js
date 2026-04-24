@@ -254,16 +254,32 @@ async function upsertCar(car) {
     initial_km: car.initialKm || 0,
   };
 
-  // INSERT pour les nouvelles voitures (déclenche le trigger car_members owner)
-  // UPDATE pour les modifications (évite le conflit RLS upsert)
-  const { error } = isNew
-    ? await sb.from('cars').insert(payload)
-    : await sb.from('cars').update(payload).eq('id', car.id);
+  let error;
+
+  if (isNew) {
+    ({ error } = await sb.from('cars').insert(payload));
+    // Si l'insert échoue, on essaie l'upsert en fallback
+    if (error) {
+      console.warn('[vroum] INSERT cars failed, trying upsert fallback:', error.message);
+      ({ error } = await sb.from('cars').upsert(payload, { onConflict: 'id' }));
+    }
+  } else {
+    ({ error } = await sb.from('cars').update(payload).eq('id', car.id));
+  }
 
   if (error) {
-    toast(`Erreur voiture : ${error.message || error.code}`, 'error');
-    console.error('[vroum] upsertCar error:', error);
+    const msg = error.message || error.code || JSON.stringify(error);
+    toast(`Erreur voiture : ${msg}`, 'error');
+    console.error('[vroum] upsertCar final error:', error);
+  } else if (isNew) {
+    // S'assurer que l'owner est bien dans car_members (sécurité si trigger absent)
+    const { data: { session } } = await sb.auth.getSession();
+    if (session) {
+      await sb.from('car_members')
+        .upsert({ car_id: car.id, user_id: car.userId, role: 'owner' }, { onConflict: 'car_id,user_id', ignoreDuplicates: true });
+    }
   }
+
   return car;
 }
 
